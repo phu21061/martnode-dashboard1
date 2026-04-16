@@ -1,0 +1,13 @@
+{
+  "name": "smartnode-ai-engine",
+  "version": "1.0.0",
+  "description": "AI recommendation engine for SmartNode IoT",
+  "main": "netlify/functions/ai_engine.js",
+  "scripts": {
+    "test": "node local_test.js"
+  },
+  "dependencies": {
+    "@netlify/functions": "^2.6.0",
+    "firebase-admin": "^12.0.0"
+  }
+}

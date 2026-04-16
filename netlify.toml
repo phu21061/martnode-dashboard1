@@ -1,0 +1,13 @@
+[build]
+  functions = "netlify/functions"
+  publish = "."
+
+[functions]
+  node_bundler = "esbuild"
+
+# Cho phép gọi thủ công HTTP bằng endpoint
+[[redirects]]
+  from = "/api/ai"
+  to = "/.netlify/functions/ai_engine"
+  status = 200
+  force = true
