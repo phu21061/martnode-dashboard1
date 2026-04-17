@@ -49,12 +49,13 @@ exports.handler = async (event, context) => {
 
         // Thu thập dữ liệu từ Firebase
         console.log("📡 Đang tải dữ liệu từ Firebase...");
-        const [configSnap, telSnap, lshSnap, energySnap, labelSnap] = await Promise.all([
+        const [configSnap, telSnap, lshSnap, energySnap, labelSnap, controlSnap] = await Promise.all([
             db.ref('Config').once('value'),
             db.ref('SmartNode_01/telemetry').once('value'),
             db.ref('LichSuHeThong').limitToLast(50).once('value'),
             db.ref('SmartNode_01/history_energy').orderByChild('time').limitToLast(50).once('value'),
-            db.ref('SmartNode_01/history_label').limitToLast(30).once('value')
+            db.ref('SmartNode_01/history_label').limitToLast(30).once('value'),
+            db.ref('Control').once('value')
         ]);
 
         const config = configSnap.val() || {};
@@ -69,7 +70,50 @@ exports.handler = async (event, context) => {
         const labelHistory = [];
         labelSnap.forEach(s => labelHistory.push(s.val()));
 
-        console.log(`✅ Đã tải: ${history.length} log, ${energyHistory.length} điểm năng lượng, ${labelHistory.length} nhãn`);
+        const control = controlSnap.val() || {};
+        const isManual = (control.dieu_khien === true); // Trong script.js, true là thủ công, false là tự động
+
+        console.log(`✅ Đã tải: ${history.length} log, ${energyHistory.length} năng lượng, ${labelHistory.length} nhãn. Chế độ thủ công: ${isManual}`);
+
+        // ── KỊch bản HARDCODE: Tự tắt/chuyển tự động khi quên (10 phút) ────────
+        if (isManual && labelHistory.length > 0) {
+            // Tìm thời điểm gần nhất có người (label !== 0)
+            let lastPresenceTime = 0;
+            // time format: "DD/MM/YYYY HH:MM:SS"
+            labelHistory.forEach(item => {
+                if (item && item.label !== 0 && item.time) {
+                    const parts = item.time.split(' ');
+                    if (parts.length === 2) {
+                        const [d, m, y] = parts[0].split('/');
+                        const [H, M, S] = parts[1].split(':');
+                        const ts = new Date(y, m - 1, d, H, M, S).getTime();
+                        if (ts > lastPresenceTime) lastPresenceTime = ts;
+                    }
+                }
+            });
+
+            // Nếu không tìm thấy ai trong 30 bản ghi gần nhất thì dùng bản ghi cũ nhất làm mốc
+            if (lastPresenceTime === 0 && labelHistory[0] && labelHistory[0].time) {
+                const parts = labelHistory[0].time.split(' ');
+                if (parts.length === 2) {
+                    const [d, m, y] = parts[0].split('/');
+                    const [H, M, S] = parts[1].split(':');
+                    lastPresenceTime = new Date(y, m - 1, d, H, M, S).getTime();
+                }
+            }
+
+            const nowTs = Date.now();
+            const minutesSincePresence = (nowTs - lastPresenceTime) / (1000 * 60);
+
+            // Nếu trạng thái hiện tại cũng là không có người và đã trôi qua hơn 10 phút
+            const currentRadar = telemetry.ai ? telemetry.ai.label : 0;
+            if (currentRadar == 0 && minutesSincePresence >= 10 && lastPresenceTime > 0) {
+                // Tự động chuyển qua chế độ Auto
+                await db.ref('Control/dieu_khien').set(false);
+                logs.push(`[TỰ ĐỘNG] Chuyển đổi sang tự động do không có người quá ${Math.floor(minutesSincePresence)} phút.`);
+                await pushAlert("Khẩn cấp", "AI đã tự động chuyển đèn về Tự động vì phát hiện bạn quên tắt đèn (không có người > 10 phút).");
+            }
+        }
 
         // ── Xây dựng prompt cho Gemini ─────────────────────────────────────
         const prompt = `Bạn là hệ thống AI phân tích thiết bị chiếu sáng thông minh SmartNode IoT.
