@@ -57,12 +57,8 @@ function doLogin() {
       const btnSave = document.getElementById('btn-save');
       if (btnSave) btnSave.style.display = isAdmin ? '' : 'none';
 
-      // User: disable manual control vì không có quyền write Control
+      // User: disable measure (đo sáng) vì chỉ admin được dùng
       if (!isAdmin) {
-        const manualCard = document.getElementById('manual-card');
-        if (manualCard) { manualCard.style.opacity = '.5'; manualCard.style.pointerEvents = 'none'; }
-        const autoToggle = document.getElementById('auto-toggle');
-        if (autoToggle) autoToggle.disabled = true;
         const measureTog = document.getElementById('measure-tog');
         if (measureTog) measureTog.disabled = true;
       }
@@ -243,7 +239,7 @@ let isAutoMode = false;
 window.currentEnvLux = 0;
 
 function setAuto(on) {
-  if (!isAdmin) { toast('Chỉ Admin mới có quyền điều khiển!', 'var(--red)'); return; }
+  // Đã tháo block isAdmin để ai cũng có quyền điều khiển thủ công
   db.ref('Control/dieu_khien').set(!on);
   refreshModeUI(on);
   addActivityLog(on ? 'Bật tự động' : 'Tắt tự động', '', '', 'var(--accent)');
@@ -283,7 +279,7 @@ function updateSliderBg(el) {
 }
 
 function qset(v) {
-  if (!isAdmin) { toast('Chỉ Admin mới có quyền điều khiển!', 'var(--red)'); return; }
+  // Đã tháo block isAdmin để ai cũng có quyền điều khiển slider
   const el = document.getElementById('bslider');
   el.value = v; updateSliderBg(el);
   document.getElementById('bval').textContent = v;
@@ -578,8 +574,12 @@ function startApp() {
       if (mucDo === 'Khẩn cấp' || mucDo === 'Cảnh báo') color = 'var(--red)';
       else if (mucDo === 'Quan trọng') color = 'var(--amber)';
       else if (mucDo === 'Bình thường') color = 'var(--green)';
+      
       addActivityLog('🤖 AI: ' + thongBao, '', mucDo, color);
-      toast('🤖 Đề xuất AI: ' + mucDo, color);
+      luuLichSu('DE_XUAT_AI', `[${mucDo}] ${thongBao}`); // Lưu thẳng vào Database Lịch sử như user yêu cầu
+      
+      // Toast hiển thị màu chữ trắng/sáng rõ ràng, không set thủ công để tránh trùng màu nền
+      toast('🤖 Đề xuất AI: ' + mucDo, '#ffffff');
     });
   });
 }
