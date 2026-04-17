@@ -1,3 +1,16 @@
+# Dependencies
 node_modules/
+
+# Secrets & Configs
+.env
 serviceAccountKey.json
+
+# Build directories
 .netlify/
+
+# Local testing & dev scripts
+local_test.js
+list_models.js
+
+# Editor config
+.vscode/

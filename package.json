@@ -7,7 +7,9 @@
     "test": "node local_test.js"
   },
   "dependencies": {
+    "@google/genai": "^1.50.1",
     "@netlify/functions": "^2.8.2",
+    "dotenv": "^16.6.1",
     "firebase-admin": "^12.7.0"
   }
 }
