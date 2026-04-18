@@ -1,6 +1,13 @@
 // Load .env khi chạy local
 require('dotenv').config();
 
+// ─── Lịch chạy tự động: mỗi 1 giờ 1 lần (Netlify Scheduled Functions) ────────
+// Cron syntax: "0 * * * *" = đúng phút 0 của mỗi giờ (00:00, 01:00, 02:00, ...)
+// Tham khảo: https://docs.netlify.com/functions/scheduled-functions/
+exports.config = {
+    schedule: "0 * * * *"  // mỗi 1 giờ chạy 1 lần
+};
+
 const admin = require('firebase-admin');
 const { GoogleGenAI } = require('@google/genai');
 
@@ -244,3 +251,8 @@ Chỉ xuất JSON thuần túy (không markdown, không giải thích), theo đ�
         };
     }
 };
+
+// ─── Ghi chú: Cách hoạt động ────────────────────────────────────────────────
+// 1. Netlify tự động gọi hàm này mỗi 1 giờ (theo lịch cron ở trên)
+// 2. Nguời dùng vẫn có thể gọi thủ công qua: GET /api/ai hoặc /.netlify/functions/ai_engine
+// 3. Mỗi lần chạy: Đọc Firebase → Gọi Gemini → Push đề xuất vào AI_De_Xuat trên Firebase
