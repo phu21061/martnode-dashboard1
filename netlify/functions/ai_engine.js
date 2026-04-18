@@ -123,21 +123,35 @@ exports.handler = async (event, context) => {
         }
 
         // ── Xây dựng prompt cho Gemini ─────────────────────────────────────
-        const prompt = `Bạn là chuyên gia phân tích năng lượng cho hệ thống đèn thông minh SmartNode IoT (đèn tích hợp radar mmWave, tự điều chỉnh độ sáng theo hiện diện người và ánh sáng môi trường).
+        const prompt = `Bạn là chuyên gia phân tích năng lượng cho hệ thống đèn thông minh SmartNode IoT (đèn tích hợp radar mmWave, tự điều chỉnh độ sáng dựa theo hiện diện người và ánh sáng tự nhiên).
+
+=== Ý NGHĨA CÁC THÔNG SỐ (RẤT QUAN TRỌNG, BẮT BUỘC TUÂN THỦ) ===
+1. NGƯỠNG ÁNH SÁNG MÔI TRƯỜNG (lux_threshold): 
+   - Đèn CHỈ ĐƯỢC PHÉP SÁNG khi ánh sáng môi trường (lux) THẤP HƠN hoặc BẰNG ngưỡng lux_threshold. 
+   - Nếu lux môi trường LỚN HƠN lux_threshold (trời đã đủ sáng), đèn buộc phải tắt (0%) để tiết kiệm điện.
+   - Do đó, tuyệt đối KHÔNG ĐƯỢC hiểu sai rằng "lux_threshold cao là lãng phí".
+
+2. THỜI GIAN CHỜ TẮT (delay_off) & CHẾ ĐỘ THỦ CÔNG:
+   - Nếu hệ thống đang bật "TỰ ĐỘNG", đèn sẽ tự giảm độ sáng rồi tắt hoàn toàn sau khi không có người (delay_off giây).
+   - Nếu đang ở chế độ "THỦ CÔNG", hệ thống giữ nguyên độ sáng mãi mãi, và delay_off mất tác dụng. 
+   => TUYỆT ĐỐI không đề xuất thiết lập delay_off khi đang ở chế độ THỦ CÔNG. Thay vào đó, hãy gợi ý người dùng bật lại chế độ TỰ ĐỘNG để tránh lãng phí nếu họ quên tắt đèn.
+
+3. HAO PHÍ DO BẬT/TẮT LIÊN TỤC:
+   - Nếu nhận thấy người dùng bật/tắt thủ công (DO_SANG) quá nhiều lần liên tiếp, hãy cảnh báo rằng việc bật tắt liên tục gây hao tổn linh kiện và làm tăng dòng điện khởi động.
 
 === THÔNG SỐ CẤU HÌNH HIỆN TẠI ===
 - Độ sáng khi có người (bright_active): ${config.bright_active ?? 'N/A'}%
-- Độ sáng khi không có người (bright_no_person): ${config.bright_no_person ?? 'N/A'}%
-- Thời gian chờ tắt (delay_off): ${config.delay_off ?? 'N/A'} giây
-- Ngưỡng ánh sáng môi trường bật đèn (lux_threshold): ${config.lux_threshold ?? 'N/A'} lux
-- Chế độ điều khiển: ${isManual ? '🔴 THỦ CÔNG (người dùng đang bật tay)' : '🟢 TỰ ĐỘNG'}
+- Độ sáng khi không người (bright_no_person): ${config.bright_no_person ?? 'N/A'}%
+- Thời gian chờ tắt (delay_off): ${config.delay_off ?? 'N/A'} giây (chỉ có tác dụng khi TỰ ĐỘNG)
+- Ngưỡng ánh sáng môi trường (lux_threshold): ${config.lux_threshold ?? 'N/A'} lux
+- Chế độ điều khiển: ${isManual ? '🔴 THỦ CÔNG (Người dùng đang tự kéo độ sáng)' : '🟢 TỰ ĐỘNG (Radar đang kiểm soát)'}
 
 === TELEMETRY HIỆN TẠI ===
-- Độ sáng hiện tại: ${telemetry.brightness ?? 'N/A'}%
-- Ánh sáng môi trường: ${telemetry.lux ?? 'N/A'} lux
-- Trạng thái radar (label): ${telemetry.ai?.label ?? 'N/A'} (0=không có người, 1=có người)
-- Công suất tiêu thụ hiện tại: ${telemetry.power ?? 'N/A'} W
-- Tổng điện năng tích lũy: ${telemetry.energy ?? 'N/A'} kWh
+- Độ sáng của đèn thực tế: ${telemetry.brightness ?? 'N/A'}%
+- Ánh sáng môi trường thu được: ${telemetry.lux ?? 'N/A'} lux
+- Phát hiện có người (label): ${telemetry.ai?.label ?? 'N/A'} (0=không người, 1=có người tĩnh, 2=nhiễu, 3=chuyển động)
+- Công suất phát thu được: ${telemetry.power ?? 'N/A'} W
+- Tổng điện năng (energy): ${telemetry.energy ?? 'N/A'} Wh
 
 === PHÂN TÍCH LỊCH SỬ NĂNG LƯỢNG (${energyHistory.length} điểm gần nhất) ===
 ${(() => {
