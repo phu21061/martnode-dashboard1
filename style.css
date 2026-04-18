@@ -1308,15 +1308,18 @@ button {
 }
 
 .log-val {
-  font-size: .78rem;
+  font-size: .72rem;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
-  padding: 2px 8px;
+  padding: 3px 9px;
   border-radius: 20px;
   background: rgba(26,26,46,0.06);
-  max-width: max-content;
-  text-align: right;
+  white-space: nowrap;        /* ← không cho xuống dòng */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;           /* ← giới hạn chiều rộng badge */
+  text-align: center;
 }
 
 .log-empty {

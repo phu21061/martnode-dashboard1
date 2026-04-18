@@ -516,10 +516,12 @@ function startApp() {
     if (d.ai) {
       if (d.ai.label !== undefined) label = Number(d.ai.label);
       else if (d.ai.label_name) {
-        if (d.ai.label_name === 'still') label = 1;
-        else if (d.ai.label_name === 'interference') label = 2;
-        else if (d.ai.label_name === 'move') label = 3;
-        else label = 0; 
+        const nameMap = {
+          'still': 1, 'stationary': 1,
+          'noise': 2, 'interference': 2,
+          'active': 3, 'move': 3, 'moving': 3
+        };
+        label = nameMap[d.ai.label_name] ?? 0;
       }
     }
 
@@ -584,11 +586,11 @@ function startApp() {
       if (mucDo === 'Khẩn cấp' || mucDo === 'Cảnh báo') color = 'var(--red)';
       else if (mucDo === 'Quan trọng') color = 'var(--amber)';
       else if (mucDo === 'Bình thường') color = 'var(--green)';
-      
-      addActivityLog('🤖 AI: ' + thongBao, '', mucDo, color);
-      luuLichSu('DE_XUAT_AI', `[${mucDo}] ${thongBao}`); // Lưu thẳng vào Database Lịch sử như user yêu cầu
-      
-      // Toast hiển thị màu chữ trắng/sáng rõ ràng, không set thủ công để tránh trùng màu nền
+
+      // Hiển thị: log-text = nội dung đề xuất, log-val = mức độ (badge ngắn gọn)
+      addActivityLog('🤖 ' + thongBao, '', '[AI] ' + mucDo, color);
+      luuLichSu('DE_XUAT_AI', `[${mucDo}] ${thongBao}`);
+
       toast('🤖 Đề xuất AI: ' + mucDo, '#ffffff');
     });
   });
