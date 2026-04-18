@@ -855,7 +855,21 @@ function loadHistoryFromFirebase() {
       else if(v.nguoi_dung==='🤖 AI System') c = 'var(--amber)';
       
       let timeDisplay = v.thoi_gian || '';
-      arr.push({ time: timeDisplay, text: typeof v.hanh_dong === 'string' ? v.hanh_dong.replace(/_/g, ' ') : v.hanh_dong, val: v.chi_tiet || '', color: c });
+
+      if (v.hanh_dong === 'DE_XUAT_AI') {
+        // chi_tiet = "[Quan trọng] Nội dung..." → tách badge và nội dung đầy đủ
+        const chiTiet = v.chi_tiet || '';
+        const m = chiTiet.match(/^\[([^\]]+)\]\s*([\s\S]*)/);
+        const badge = m ? m[1] : 'AI';
+        const body  = m ? m[2].trim() : chiTiet;
+        let aiColor = 'var(--accent)';
+        if (badge === 'Cảnh báo' || badge === 'Khẩn cấp') aiColor = 'var(--red)';
+        else if (badge === 'Quan trọng') aiColor = 'var(--amber)';
+        arr.push({ time: timeDisplay, text: '🤖 ' + body, val: badge, color: aiColor, isAI: true });
+      } else {
+        const label = typeof v.hanh_dong === 'string' ? v.hanh_dong.replace(/_/g, ' ') : (v.hanh_dong || '');
+        arr.push({ time: timeDisplay, text: label, val: v.chi_tiet || '', color: c });
+      }
     });
     // Push key đã theo thứ tự thời gian, reverse để mới nhất lên đầu
     activityLogs = arr.reverse();
