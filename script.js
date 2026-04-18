@@ -201,6 +201,21 @@ function renderLog() {
     else if (rawColor.includes('--amber') || rawColor === 'var(--amber)') { pillBg='rgba(180,130,0,0.1)'; pillColor='#9a7000'; }
     else if (rawColor.includes('--accent') || rawColor === 'var(--accent)') { pillBg='rgba(132,79,193,0.1)'; pillColor='#844FC1'; }
     else if (rawColor.includes('--t1') || rawColor === 'var(--t1)') { pillBg='rgba(108,114,147,0.1)'; pillColor='#6C7293'; }
+
+    // Log AI: hiển thị 2 dòng — dòng trên là timestamp + badge, dòng dưới là nội dung đầy đủ
+    if (l.isAI) {
+      return `
+<div class="log-item log-item-ai" style="animation-delay:${Math.min(i,8)*25}ms;flex-direction:column;align-items:flex-start;gap:6px">
+  <div style="display:flex;align-items:center;gap:8px;width:100%">
+    <div class="log-time">${l.time}</div>
+    <div style="width:8px;height:8px;border-radius:50%;background:${pillColor};flex-shrink:0"></div>
+    <div class="log-val" style="color:${pillColor};background:${pillBg};white-space:nowrap">${l.val}</div>
+  </div>
+  <div style="font-size:.82rem;color:#1a1a2e;font-weight:600;line-height:1.5;word-break:break-word;width:100%;padding-left:2px">${l.text}</div>
+</div>`;
+    }
+
+    // Log thường: layout 1 hàng
     return `
 <div class="log-item" style="animation-delay:${Math.min(i,8)*25}ms">
   <div class="log-time">${l.time}</div>
@@ -587,10 +602,12 @@ function startApp() {
       else if (mucDo === 'Quan trọng') color = 'var(--amber)';
       else if (mucDo === 'Bình thường') color = 'var(--green)';
 
-      // Hiển thị: log-text = nội dung đề xuất, log-val = mức độ (badge ngắn gọn)
-      addActivityLog('🤖 ' + thongBao, '', '[AI] ' + mucDo, color);
-      luuLichSu('DE_XUAT_AI', `[${mucDo}] ${thongBao}`);
+      // Hiển thị: isAI=true → renderLog sẽ dùng layout 2 dòng hiển thị đầy đủ
+      const entry = { time: ts(), text: '🤖 ' + thongBao, val: mucDo, color, isAI: true };
+      activityLogs.unshift(entry);
+      renderLog();
 
+      luuLichSu('DE_XUAT_AI', `[${mucDo}] ${thongBao}`);
       toast('🤖 Đề xuất AI: ' + mucDo, '#ffffff');
     });
   });
