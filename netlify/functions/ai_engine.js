@@ -61,7 +61,7 @@ exports.handler = async (event, context) => {
             db.ref('SmartNode_01/telemetry').once('value'),
             db.ref('LichSuHeThong').limitToLast(50).once('value'),
             db.ref('SmartNode_01/history_energy').orderByChild('time').limitToLast(50).once('value'),
-            db.ref('SmartNode_01/history_label').limitToLast(30).once('value'),
+            db.ref('SmartNode_01/history_label').limitToLast(600).once('value'),
             db.ref('Control').once('value')
         ]);
 
