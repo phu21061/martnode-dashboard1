@@ -116,44 +116,66 @@ exports.handler = async (event, context) => {
         }
 
         // ── Xây dựng prompt cho Gemini ─────────────────────────────────────
-        const prompt = `Bạn là hệ thống AI phân tích thiết bị chiếu sáng thông minh SmartNode IoT.
-Thiết bị là đèn thông minh tích hợp radar mmWave, điều chỉnh độ sáng tự động theo hiện diện người và điều kiện ánh sáng môi trường.
+        const prompt = `Bạn là chuyên gia phân tích năng lượng cho hệ thống đèn thông minh SmartNode IoT (đèn tích hợp radar mmWave, tự điều chỉnh độ sáng theo hiện diện người và ánh sáng môi trường).
 
-=== DỮ LIỆU THỜI GIAN THỰC ===
-Cấu hình hệ thống (Config):
-${JSON.stringify(config, null, 2)}
+=== THÔNG SỐ CẤU HÌNH HIỆN TẠI ===
+- Độ sáng khi có người (bright_active): ${config.bright_active ?? 'N/A'}%
+- Độ sáng khi không có người (bright_no_person): ${config.bright_no_person ?? 'N/A'}%
+- Thời gian chờ tắt (delay_off): ${config.delay_off ?? 'N/A'} giây
+- Ngưỡng ánh sáng môi trường bật đèn (lux_threshold): ${config.lux_threshold ?? 'N/A'} lux
+- Chế độ điều khiển: ${isManual ? '🔴 THỦ CÔNG (người dùng đang bật tay)' : '🟢 TỰ ĐỘNG'}
 
-Telemetry hiện tại:
-${JSON.stringify(telemetry, null, 2)}
+=== TELEMETRY HIỆN TẠI ===
+- Độ sáng hiện tại: ${telemetry.brightness ?? 'N/A'}%
+- Ánh sáng môi trường: ${telemetry.lux ?? 'N/A'} lux
+- Trạng thái radar (label): ${telemetry.ai?.label ?? 'N/A'} (0=không có người, 1=có người)
+- Công suất tiêu thụ hiện tại: ${telemetry.power ?? 'N/A'} W
+- Tổng điện năng tích lũy: ${telemetry.energy ?? 'N/A'} kWh
 
-=== LỊCH SỬ HOẠT ĐỘNG GẦN NHẤT (tối đa 50 sự kiện) ===
-${JSON.stringify(history, null, 2)}
+=== PHÂN TÍCH LỊCH SỬ NĂNG LƯỢNG (${energyHistory.length} điểm gần nhất) ===
+${(() => {
+    if (!energyHistory.length) return 'Không có dữ liệu.';
+    const powers = energyHistory.map(e => e.power).filter(p => p != null);
+    const avg = powers.reduce((a, b) => a + b, 0) / powers.length;
+    const max = Math.max(...powers);
+    const min = Math.min(...powers);
+    // Tìm các điểm bất thường: công suất cao nhưng label=0
+    const wastePoints = energyHistory.filter(e => e.power > avg * 1.2 && e.label === 0);
+    return `Công suất TB: ${avg.toFixed(1)}W | Max: ${max}W | Min: ${min}W
+Số lần phát hiện lãng phí (công suất cao + không có người): ${wastePoints.length} lần`;
+})()}
 
-=== LỊCH SỬ TIÊU THỤ ĐIỆN NĂNG (tối đa 50 điểm) ===
-${JSON.stringify(energyHistory, null, 2)}
+=== PHÂN TÍCH LỊCH SỬ RADAR (${labelHistory.length} bản ghi gần nhất) ===
+${(() => {
+    if (!labelHistory.length) return 'Không có dữ liệu.';
+    const total = labelHistory.length;
+    const withPerson = labelHistory.filter(l => l.label !== 0).length;
+    const noPerson = total - withPerson;
+    const occupancyRate = ((withPerson / total) * 100).toFixed(1);
+    return `Tỷ lệ có người: ${occupancyRate}% (${withPerson}/${total} bản ghi)
+Tỷ lệ không có người: ${(100 - parseFloat(occupancyRate)).toFixed(1)}% (${noPerson}/${total} bản ghi)`;
+})()}
 
-=== LỊCH SỬ NHÃN RADAR AI (tối đa 30 bản ghi) ===
-${JSON.stringify(labelHistory, null, 2)}
+=== SỰ KIỆN HỆ THỐNG GẦN ĐÂY (${history.length} sự kiện) ===
+${history.slice(-10).map(h => `[${h.time ?? '?'}] ${h.event ?? JSON.stringify(h)}`).join('\n')}
 
-=== MỤC TIÊU CỐT LÕI: TIẾT KIỆM ĐIỆN NĂNG ===
-Bạn phải phân tích dữ liệu trên để tìm ra sự LÃNG PHÍ ĐIỆN NĂNG và đưa ra TỐI ĐA 3 đề xuất tối ưu hóa.
-Hãy tìm các điểm bất hợp lý như:
-1. Đèn sáng quá cao ở thời điểm không có người (bright_no_person cao).
-2. Thời gian chờ tắt đèn quá lâu (delay quá lớn).
-3. Độ sáng hoạt động (bright_active) không cần thiết ở mức cao dựa trên thói quen hoặc độ sáng môi trường.
-4. Phát hiện quên tắt đèn khi ở chế độ thủ công (is_manual = true).
+=== QUY TẮC PHÂN LOẠI MỨC ĐỘ ===
+Áp dụng đúng theo tiêu chí sau:
+- "Cảnh báo": Đang lãng phí điện RÕ RÀNG ngay lúc này (vd: đèn sáng >60% khi không có người, chế độ thủ công quên tắt, bright_no_person >40%).
+- "Quan trọng": Cấu hình chưa tối ưu, có thể tiết kiệm >15% điện năng nếu điều chỉnh.
+- "Thông tin": Gợi ý cải thiện nhỏ, tiết kiệm <15% hoặc chỉ là thói quen tốt.
 
-=== YÊU CẦU ĐẦU RA ===
-- Mỗi đề xuất phải:
-  + Nêu rõ con số hiện tại và con số thay đổi đề xuất (vd: "giảm bright_no_person từ 50% xuống 20%").
-  + Nêu lý do thuyết phục dựa vào dữ liệu hệ thống đo được.
-  + Viết bằng tiếng Việt, thân thiện, dễ hiểu, tối đa 2 câu.
-- Phân loại mức độ: "Thông tin" (gợi ý nhẹ), "Quan trọng" (tối ưu đáng kể), "Cảnh báo" (đang rất lãng phí).
+=== NHIỆM VỤ ===
+Thực hiện TỪNG BƯỚC sau (suy luận nội bộ, KHÔNG xuất ra):
+Bước 1: Xác định các điểm lãng phí dựa trên số liệu thực tế ở trên.
+Bước 2: Với mỗi điểm lãng phí, tính toán mức độ nghiêm trọng theo quy tắc phân loại.
+Bước 3: Chọn TỐI ĐA 3 đề xuất có tác động lớn nhất, ưu tiên "Cảnh báo" trước.
+Bước 4: Mỗi đề xuất phải nêu: con số hiện tại → con số đề xuất + lý do từ dữ liệu thực tế.
 
-Chỉ trả về JSON thuần túy (không markdown, không giải thích), theo định dạng:
+Chỉ xuất JSON thuần túy (không markdown, không giải thích), theo định dạng:
 {
   "de_xuat": [
-    { "muc_do": "...", "thong_bao": "..." }
+    { "muc_do": "Cảnh báo|Quan trọng|Thông tin", "thong_bao": "..." }
   ]
 }`;
 

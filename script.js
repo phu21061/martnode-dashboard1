@@ -57,10 +57,20 @@ function doLogin() {
       const btnSave = document.getElementById('btn-save');
       if (btnSave) btnSave.style.display = isAdmin ? '' : 'none';
 
-      // User: disable measure (đo sáng) vì chỉ admin được dùng
+      // User: khóa thanh kéo nhóm Cài Đặt
       if (!isAdmin) {
         const measureTog = document.getElementById('measure-tog');
         if (measureTog) measureTog.disabled = true;
+
+        const slAct = document.getElementById('sl-act');
+        const slStil = document.getElementById('sl-stil');
+        const slNop = document.getElementById('sl-nop');
+        const luxThr = document.getElementById('lux-thr-sl');
+        
+        if(slAct) slAct.disabled = true;
+        if(slStil) slStil.disabled = true;
+        if(slNop) slNop.disabled = true;
+        if(luxThr) luxThr.disabled = true;
       }
 
       document.getElementById('login-screen').style.display = 'none';
